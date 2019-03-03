@@ -8,10 +8,11 @@ namespace MainInterface
     public static class CommonVal  // static 不是必须
     {
         public static List<short> m_shECGList = new List<short>();
-        public static string Workspace;
+        public static string DataWorkSpace;
+        public static bool isPlaying = false;
         private static string testerType;
         private static string testerID;
-        private static string dataType;
+        private static string videoNum;
 
         public static string TesterType
         {
@@ -25,10 +26,10 @@ namespace MainInterface
             set { testerID = value; }
         }
 
-        public static string DataType
+        public static string VideoNum
         {
-            get { return dataType; }
-            set { dataType = value; }
+            get { return videoNum; }
+            set { videoNum = value; }
         }
     }
 }

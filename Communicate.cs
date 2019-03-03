@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using MainInterface;
+using System.Windows.Forms;
 
 namespace VSCapture
 {
@@ -53,8 +54,6 @@ namespace VSCapture
         public DSerialPort()
         {
             DPort = this;
-            //Workspace = GetWorkSpace();
-            //CsvName = GetCsvName();
 
             DPortBufSize = 4096;
             DPort_rxbuf = new byte[DPortBufSize];
@@ -223,8 +222,19 @@ namespace VSCapture
 
                 if (dxrecordmaintype == DataConstants.DRI_MT_WAVE)
                 {
-                    short[] sroffArray = { dx_record.hdr.sr_offset1, dx_record.hdr.sr_offset2, dx_record.hdr.sr_offset3, dx_record.hdr.sr_offset4, dx_record.hdr.sr_offset5, dx_record.hdr.sr_offset6, dx_record.hdr.sr_offset7, dx_record.hdr.sr_offset8 };
-                    byte[] srtypeArray = { dx_record.hdr.sr_type1, dx_record.hdr.sr_type2, dx_record.hdr.sr_type3, dx_record.hdr.sr_type4, dx_record.hdr.sr_type5, dx_record.hdr.sr_type6, dx_record.hdr.sr_type7, dx_record.hdr.sr_type8 };
+                    short[] sroffArray = { 
+                                             dx_record.hdr.sr_offset1, dx_record.hdr.sr_offset2, 
+                                             dx_record.hdr.sr_offset3, dx_record.hdr.sr_offset4, 
+                                             dx_record.hdr.sr_offset5, dx_record.hdr.sr_offset6, 
+                                             dx_record.hdr.sr_offset7, dx_record.hdr.sr_offset8 
+                                         };
+
+                    byte[] srtypeArray = { 
+                                             dx_record.hdr.sr_type1, dx_record.hdr.sr_type2, 
+                                             dx_record.hdr.sr_type3, dx_record.hdr.sr_type4, 
+                                             dx_record.hdr.sr_type5, dx_record.hdr.sr_type6, 
+                                             dx_record.hdr.sr_type7, dx_record.hdr.sr_type8 
+                                         };
 
                     uint unixtime = dx_record.hdr.r_time;
                     // Unix timestamp is seconds past epoch 
@@ -239,10 +249,8 @@ namespace VSCapture
                     {
                         int offset = (int)sroffArray[i];
                         int nextoffset = 0;
-                        //if (i==7) nextoffset = (1450 - offset);
                         if (i == 7) nextoffset = 1450;
                         else nextoffset = (int)sroffArray[i + 1];
-                        //int nextoffset = (int)sroffArray [i + 1];
 
                         if (nextoffset <= offset || nextoffset > 1450) break;
 
@@ -254,13 +262,16 @@ namespace VSCapture
                         {
                             buffer[j] = dx_record.data[6 + j + offset];
                         }
-
-                        //Convert Byte array to 16 bit short values
+                        
                         for (int n = 0; n < buffer.Length; n += 2)
                         {
+                            //Convert Byte array to 16 bit short values
                             short wavedata = BitConverter.ToInt16(buffer, n);
-                            //ShowWaveSubRecordData (wavedata);			
-                            AddToWaveDataList(srtypeArray[i], wavedata);
+                            //AddToWaveDataList(srtypeArray[i], wavedata);
+                            if (srtypeArray[i] == DataConstants.DRI_WF_ECG1)
+                            {
+                                CommonVal.m_shECGList.Add(wavedata);
+                            }
                         }
                     }
 
@@ -269,13 +280,13 @@ namespace VSCapture
             }
         }
 
-        public void AddToWaveDataList(byte waveDataType, short waveData)
-        {
-            if (waveDataType == DataConstants.DRI_WF_ECG1)
-            {
-                CommonVal.m_shECGList.Add(waveData);
-            }
-        }
+        //public void AddToWaveDataList(byte waveDataType, short waveData)
+        //{
+        //    if (waveDataType == DataConstants.DRI_WF_ECG1)
+        //    {
+        //        CommonVal.m_shECGList.Add(waveData);
+        //    }
+        //}
 
         public void ShowWaveSubRecordData(string dTime)
         {
@@ -283,16 +294,26 @@ namespace VSCapture
             {
                 m_strBuilderWave.Append(dTime);
                 m_strBuilderWave.Append(',');
-                //SaveWaveDataLists ("ECG", waveValue, 0.01);
                 const double decimalShift = 0.01;
 
                 var s1 = ecgValue.ToString();
                 ValidateAddWaveData(s1, decimalShift, false);
 
-                var filename = string.Format("{0}.csv", CommonVal.DataType);
-                var pathCsv = Path.Combine(CommonVal.Workspace, filename);
-
-                ExportToWaveCsvFile(pathCsv);
+                var filename = string.Format("{0}.csv", CommonVal.VideoNum);
+                var pathCsv = Path.Combine(CommonVal.DataWorkSpace, filename);
+                
+                if (File.Exists(pathCsv))
+                {
+                    if (MessageBox.Show("文件已存在，是否继续写入？", "Confirm Message", 
+                        MessageBoxButtons.YesNoCancel) == DialogResult.Yes)
+                    {
+                        ExportToWaveCsvFile(pathCsv);
+                    }
+                }
+                else
+                {
+                    ExportToWaveCsvFile(pathCsv);
+                }
 
                 m_strBuilderWave.Remove(0, m_strBuilderWave.Length);
             }
